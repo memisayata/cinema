@@ -7,120 +7,67 @@ const { CinemaDB } = require("./cinema_database.js");
 const PORT = 8000;
 const IP = "0.0.0.0";
 
-
-let selectedSeats = []; // Global olarak tanımlama
-
-
 function sitzplatzauswahl(movieIDs) {
     return new Promise((resolve) => {
         if (!Array.isArray(movieIDs) || movieIDs.length === 0) {
-            resolve('<p>Kein Film Auswählt</p>');
+            resolve('<p>Keine Film Auswähl</p>');
             return;
         }
 
         let selection = `<h2>Films</h2>`;
         const promises = movieIDs.map(movieID => {
             return new Promise((innerResolve) => {
+                console.log(`${movieID}`);
+                
+                
                 fs.readFile('cinema.html', 'utf-8', (err, data) => {
                     if (err) {
                         console.error(err);
-                        selection += '<p>Sinemadan veri yüklenirken hata oluştu.</p>';
+                        selection += '<p>Error loading cinema data</p>';
                     } else {
-                        const obj = JSON.parse(movieID);
-                        //console.log(movieID) // {"cinemaID":"1","movieID":5,"saalID":1}
-                        const cinemaID = obj.cinemaID;
-                        const filmID = obj.movieID;
-                        const saalID = obj.saalID;
-
+						selection += `<p>Selection Detail: ${movieID} </p>`;
+                        sitzplatz(movieID);
                         
-                        // Belirli film için koltukları almak için metod çağrısı
-                        sitzplatz(cinemaID,filmID,saalID).then(seatsHtml => {
-                            selection += `<p>Kunden Auswähl: ${movieID}</p>`;
-                            selection += seatsHtml; // Koltuk HTML'sini ekle
-                            innerResolve(); // İç promise'i çöz
-                        });
+                       
+						selection += data; 
                     }
+                    innerResolve(); // İç promise'i resolve et
                 });
             });
         });
 
+        // Tüm dosya okumalarının tamamlanmasını bekle
         Promise.all(promises).then(() => {
-            resolve(selection); // Ana promise'i çöz
+          
+            resolve(selection); // Tüm iç promise'ler tamamlandığında ana promise'i resolve et
         });
     });
 }
-function sitzplatz(cinemaID, filmID, saalID) {
+
+function sitzplatz(movieIDk) {
+    const obj = JSON.parse(movieIDk);
+    const cinemaID = obj.cinemaID;
+    const saalID = obj.saalID;
+    const movieID = obj.movieID; 
+
+    console.log('cinemaID',cinemaID);
+    console.log('movieID',movieID);
+    console.log('saalID',saalID);
+    
     const cinema = new CinemaDB();
     cinema.openDB();
 
-    return cinema.koltuk(cinemaID, filmID, saalID).then(sitz => {
-        console.log('Console Sitz : ',sitz);
-        let seatsHtml = '<div class="cinema">';
-
-        seatsHtml += `
-        <style>
-            .cinema {
-                width: 170px; 
-                display: flex; 
-                flex-wrap: wrap; 
-                gap: 5px; 
-            }
-            .seat {
-                width: 30px; 
-                height: 30px; 
-                background-color: #32CD32; 
-                border-radius: 3px; 
-                display: flex; 
-                justify-content: center; 
-                align-items: center; 
-                cursor: pointer; 
-            }
-            .seat.taken {
-                background-color: rgb(224, 19, 19); 
-                cursor: not-allowed; 
-            }
-            .seat.selected {
-                background-color: #FFD700; 
-            }
-        </style>
-        <script>
-            let selectedSeats = []; // Burada tekrar tanımlama
-            function selectSeat(seatElement) {
-                if (!seatElement.classList.contains('taken')) {
-                    seatElement.classList.toggle('selected');
-
-                    const seatId = seatElement.getAttribute('data-seat-id');
-
-                    if (selectedSeats.includes(seatId)) {
-                        selectedSeats = selectedSeats.filter(id => id !== seatId);
-                    } else {
-                        selectedSeats.push(seatId);
-                    }
-
-                    console.log("Seçilen Koltuklar:", selectedSeats);
-                }
-            }
-        </script>
-        `;
-
-        sitz.forEach(seat => {
-            const seatClass = seat.status === 0 ? 'seat' : 'seat taken';
-            seatsHtml += `
-            <div class="${seatClass}" data-seat-id="${seat.sitze_id || seat.id}" onclick="selectSeat(this)">
-                ID: ${seat.sitze_id || seat.id} 
-            </div>
-            `;
-        });
-
-        seatsHtml += '</div>';
+    // Koltuk verilerini almak için koltuk metodunu çağır
+    cinema.koltuk(saalID).then(sitz => {
+        console.log('MovieID :', movieID, sitz);
+        
         cinema.closeDB(); 
-        return seatsHtml;
     }).catch(err => {
-        console.error("Hata:", err);
-        cinema.closeDB();
-        return '<p>Koltuklar yüklenirken hata oluştu.</p>';
+        console.error("Err:", err);
+        cinema.closeDB(); 
     });
 }
+
 function getCinamaSelection() {
     return new Promise(resolve => {
         let selection = `<select name='cinema' onchange='f.submit()'>`;
@@ -139,6 +86,7 @@ function getCinamaSelection() {
         });
     });
 }
+
 const server = http.createServer((req, res) => {
     const request_url = req.url;
     const request_data = url.parse(req.url); // http://127.0.0.1:8000?cinema=1&movie=7
@@ -158,7 +106,6 @@ const server = http.createServer((req, res) => {
             .then(cinemas => {
                 getCinamaSelection().then(selection => {
                     let html_template = `
-                    <!DOCTYPE html>
                     <html>
                     <head>
                     <meta charset='utf-8'/>
@@ -174,14 +121,11 @@ const server = http.createServer((req, res) => {
 
                     movies.forEach(movie => {
                         const movieData = JSON.stringify({ cinemaID: cinemaID, movieID: movie.ID, saalID: movie.saalID });
-                       
                         html_template += `
                         <div style='clear:both'> 
                             <div style='float:left;width:100px;'>BILD</div>
                             <div style='float:left;width:400px;'>${movie.titel}</div>
                             <div style='float:left;width:100px;'>${cinemaID}</div>
-                            <div style='float:left;width:100px;'>FilmID:${movie.filmID}</div>
-                            <div style='float:left;width:100px;'>SpielzeitID : ${movie.spielzeitID}</div>
                             <div style='float:left;width:100px;'>${movie.saalName}</div>
                             <input type='checkbox' name='movieID' value='${movieData}'> Rezervasyon
                         </div>`;
@@ -201,10 +145,8 @@ const server = http.createServer((req, res) => {
         });
     } else if (request_data.pathname === '/reservation' && movieIDs.length > 0) {
         // Koltuk rezervasyon sayfasını oluştur
-        console.log(movieIDs); // [ '{"cinemaID":"1","movieID":5,"saalID":1}' ] böyle bir sonuc gelmeli 
         sitzplatzauswahl(movieIDs).then(seatSelection => {
             let html_template = `
-            <!DOCTYPE html>
             <html>
             <head>
             <meta charset='utf-8'/>

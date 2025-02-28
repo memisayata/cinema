@@ -131,33 +131,20 @@ CinemaDB.prototype.getMovieGenre = function( movieID ) {
 
 }
 
-CinemaDB.prototype.koltuk = function(cinemaID, filmID, saalID) {
-	console.log(cinemaID, filmID, saalID);
-    return new Promise((resolve, reject) => {
-        const query = `
-SELECT id, saal_id, film_id, status, cinema_id FROM kinositze 
-WHERE kinositze.saal_id = ?
-AND kinositze.film_id = ?
-AND kinositze.cinema_id = ?
+CinemaDB.prototype.koltuk = function( saalID ) {
+	
+	return new Promise( ( resolve ) => {
+			
+		const query = `SELECT * from kinositze 
+		WHERE kinositze.saal_id = ?`
+		
+		this.db.all( query, [saalID], (err, rows )  => {
+			resolve( rows )		
+		})
+	});
 
-`;
-/*
-SELECT id, saal_id, film_id, status, cinema_id FROM kinositze 
-WHERE kinositze.saal_id = ?
-AND kinositze.film_id = ?
-AND kinositze.cinema_id = ?
-
-*/
-        this.db.all(query, [saalID, filmID, cinemaID], (err, rows) => {
-            if (err) {
-                reject(err); // Hata durumunda promise'i reddet
-            } else {
-				//console.log('SQL Query :',rows);
-				resolve(rows); // Başarılı durumda sonucu döndür
-            }
-        });
-    });
 }
+
 
 
 /*

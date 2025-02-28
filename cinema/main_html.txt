@@ -1,0 +1,26 @@
+html_template = `
+					<html>
+					<head>
+					<meta charset='utf-8'/>
+					<title>Ugly Cinema</title></head>
+					<body>
+					<h1 style='color: #3D80CC'>Ugly AF Cinema</h1>
+					<form id='f' action='/'>
+					${selection}
+					</form>`
+					
+					movies.forEach( movie => { // Movies aus Zeile 28...
+						html_template += `
+						<div style='clear:both'> 
+							<div style='float:left;width:100px;'>BILD</div>
+							<div style='float:left;width:400px;'>${movie.titel}</div>
+							<div style='float:left;width:100px;'>${movie.KinoID}</div>
+							<div style='float:left;width:100px;'>${movie.saalName}</div>
+						</div>
+						`
+						
+					});
+						
+					
+                   
+					

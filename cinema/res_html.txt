@@ -1,0 +1,13 @@
+
+html_template = `
+<html>
+<head>
+<meta charset='utf-8'/>
+<title>Ugly Cinema</title></head>
+<body>
+<h1 style='color: #3D80CC'>Test Res</h1>
+
+`
+					
+	html_template += `	`
+                   
